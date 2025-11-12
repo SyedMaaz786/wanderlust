@@ -3,6 +3,7 @@ body{
     display: flex;
     flex-direction: column;
     min-height: 100vh;
+    
 }
 
 .container{
@@ -107,3 +108,11 @@ body{
     padding-left: 0;
     padding-right: 0;
 }
+
+
+
+
+
+
+
+

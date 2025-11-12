@@ -1,11 +1,10 @@
 <% layout("/layouts/boilerplate") %>     <!--This line is used to link or take the HTML from this file and plug it into boiler.ejs-->
-<div class="row mt-3">
-    <div class="col-8 offset-2">
-<div class="row mt-3">
-<div class="col-8 offset-2">
+<div class="container">
+    <div class="row mt-3">
+      <div class="col-8 offset-2">
     <br /><br />
 <h3>Create a New Listing</h3>
-<form method="POST" action="/listings">
+<form method="POST" action="/listings" novalidate class="needs-validation">
     
     <div class="mb-3">
         <label for="title" class="form-label">Title</label>
@@ -14,8 +13,10 @@
             placeholder="Add a catchy title" 
             type="text" 
             class="form-control"
-        />
-    </div>
+            required              
+        />                         <!--Required here means that this field is mandatory to fillin.-->
+        <div class="valid-feedback">Title looks good</div>   <!--Here valid-feedback is the bootstrap class.--> 
+    </div>                                
 
     <div class="mb-3">
         <label for="description" class="form-label">Description</label>
@@ -23,7 +24,9 @@
             name="listing[description]" 
             placeholder="enter description"
             class="form-control"
+            required
         ></textarea>
+        <div class="invalid-feedback">Please enter a short description</div>
     </div>
 
     <div class="mb-3">
@@ -40,10 +43,11 @@
         <label for="price" class="form-label">Price</label>
         <input 
             name="listing[price]" 
-            placeholder="1200" 
-            type="number" 
+            placeholder="1200"  
             class="form-control"
+            required
         />
+        <div class="invalid-feedback">Price should be valid</div>
     </div>
     
     <div class="mb-3 col-md-8">
@@ -53,7 +57,9 @@
             placeholder="India" 
             type="text" 
             class="form-control"
+            required
         />
+        <div class="invalid-feedback">Country name should be valid </div>
     </div>
     </div>
     <div class="mb-3">
@@ -63,10 +69,12 @@
             placeholder="Bangalore, Mumbai" 
             type="text"
             class="form-control"
+            required      
         />
+        <div class="invalid-feedback">Location should be valid</div>
     </div>
     
-    <button class="btn btn-dark add-btn mt-3">Add</button>
+    <button class="btn btn-dark add-btn mt-3 mb-3">Add</button>
 
 </form>
 </div>
