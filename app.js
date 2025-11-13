@@ -7,7 +7,10 @@ const methodOverride = require('method-override');
 const ejsMate = require('ejs-mate');
 const wrapAsync = require('./utils/wrapAsync.js');
 const ExpressError = require('./utils/ExpressError.js');
-const { listingSchema } = require('./schema.js')
+const { listingSchema, reviewSchema } = require('./schema.js');
+const Review = require('./models/review.js');
+
+
 
 
 
@@ -45,6 +48,16 @@ const Schemavalidate = (req, res, next) => {
             next();
         }
     };
+const validateReview = (req, res, next) => {
+    let { error } = reviewSchema.validate(req.body);    //Here we are calling the reviewSchema we created in the schema.js to handle the schemavalidations.
+    if (error) {                                         //And the validateReview is the variable we are assigning to perform this block of the code and check we are calling Schemavalidate in the other routes below.
+        let errMsg = error.details.map((el) => el.message).join(',');
+        throw new ExpressError(400, errMsg);              //And we are directly assigning this to the {error} we get and passing the conditions if and all the logic thatsit.
+        }
+        else {
+            next();
+        }
+    };
 
 //Index Route
 app.get('/listings',wrapAsync(async (req,res) => {
@@ -60,7 +73,7 @@ app.get('/listings/new', (req,res) => {        //CREATE
 //Show Route
 app.get('/listings/:id',wrapAsync(async (req,res) => {   //READ
     let {id} = req.params;
-    const listing = await Listing.findById(id);
+    const listing = await Listing.findById(id).populate('reviews');  //populate('reviews') tells Mongoose, instead of returning only the ObjectId, Fetch the actual Review documents and insert them.
     res.render('listings/show.ejs', {listing});
 }));
 
@@ -94,6 +107,31 @@ app.delete('/listings/:id', wrapAsync(async (req,res) => {       //DELETE
     console.log(deletedListing);
     res.redirect('/listings');
 }));
+
+//Reviews(POST Review Route)
+
+app.post('/listings/:id/reviews', validateReview, wrapAsync( async (req,res) => {
+    let listing = await Listing.findById(req.params.id);
+    let newReview = new Review (req.body.review);
+
+    await newReview.save();
+    listing.reviews.push(newReview._id);
+    await listing.save();
+
+    res.redirect(`/listings/${listing._id}`);
+}));
+
+//Delete (Review Route)
+
+app.delete('/listings/:id/reviews/:reviewId', wrapAsync(async (req,res) => {
+    let { id , reviewId } = req.params;
+
+    await Listing.findByIdAndUpdate(id, {$pull: {reviews : reviewId}});
+    await Review.findByIdAndDelete(reviewId);
+
+    res.redirect(`/listings/${id}`);
+})
+);
 
 // app.get('/testListing', async (req,res) => {
 //     let sampleListing = new Listing({

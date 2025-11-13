@@ -1,0 +1,16 @@
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
+
+const reviewSchema = new Schema ({   //Schema created
+    comment: String,
+    rating: {
+        type: Number,
+        min: 1,
+        max: 5,
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now()
+    }
+});
+module.exports = mongoose.model('Review', reviewSchema);  //model created for the above schema

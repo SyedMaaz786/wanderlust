@@ -10,3 +10,10 @@ module.exports.listingSchema = Joi.object ({  //instead of declaring the listing
         image: Joi.string().allow('',null),  //Here we wanna allow the user if he dont have any image i.e,''empty string or null value.
     }).required(),
 });
+
+module.exports.reviewSchema = Joi.object({  //Defining the reviews schema
+    review:Joi.object({
+        rating: Joi.number().required().min(1).max(5),
+        comment: Joi.string().required(),
+    }).required(),
+});
