@@ -9,10 +9,8 @@ const wrapAsync = require('./utils/wrapAsync.js');
 const ExpressError = require('./utils/ExpressError.js');
 const { listingSchema, reviewSchema } = require('./schema.js');
 const Review = require('./models/review.js');
-
-
-
-
+const session = require('express-session');
+const flash = require('connect-flash');
 
 const MONGO_URL = 'mongodb://127.0.0.1:27017/wanderlust';
 main()
@@ -33,9 +31,28 @@ app.use(methodOverride('_method'));
 app.engine('ejs', ejsMate);
 app.use(express.static(path.join(__dirname, '/public')));   // (app.use) This is how you use middleware in Express. (express.static) This is the middleware built-in function.(path.join) This part is crucial for creating a path.(__dirname) This is a global variable in Node.js that gives you the absolute path of the directory.(public) This is the name of the folder you want to serve.
 
+const sessionOptions = {         //Here we are using session. Which is basically used to store the user info on the server for sometime. 
+    secret: 'mysupersecretcode',  //This is the basic way to write the session.
+    resave: false,                //Don’t save the session to the store if nothing has changed in the session.
+    saveUninitialized: true,       //Save a session even if it is new and not modified.
+    cookie: {
+        expires: Date.now() + 7 * 24 * 60 * 60 * 1000,  //This is the logic we are writing that the cookie shold expire after 1 week.
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        httpOnly: true,   //This is to protect cookie from malicious xss attacks.
+    },
+};
 
 app.get('/', (req,res) => {
     res.send('Hi, i am root');
+});
+
+app.use(session(sessionOptions));  //This activates the session middleware.
+app.use(flash());  //This activates the flash middleware.
+
+app.use( (req,res,next) => {
+    res.locals.success = req.flash('success'); //This is the middleware for flash.
+    res.locals.error = req.flash('error');
+    next();
 });
 
 const Schemavalidate = (req, res, next) => {
@@ -74,6 +91,10 @@ app.get('/listings/new', (req,res) => {        //CREATE
 app.get('/listings/:id',wrapAsync(async (req,res) => {   //READ
     let {id} = req.params;
     const listing = await Listing.findById(id).populate('reviews');  //populate('reviews') tells Mongoose, instead of returning only the ObjectId, Fetch the actual Review documents and insert them.
+    if(!listing) {
+        req.flash('error', 'Listing you requested for does not exist');
+        return res.redirect('/listings');
+    }
     res.render('listings/show.ejs', {listing});
 }));
 
@@ -81,6 +102,7 @@ app.get('/listings/:id',wrapAsync(async (req,res) => {   //READ
 app.post('/listings', Schemavalidate, wrapAsync (async (req,res,next) => {             //CREATE
         const newListing = new Listing(req.body.listing);  // error handling concepts are present where we have created a function in wrapAsync.js file and using it here
         await newListing.save();
+        req.flash('success', 'New Listing Created!');   //We will be displaying this msg when the user creates a new listing.
         res.redirect('/listings');
 })
 );
@@ -90,6 +112,10 @@ app.post('/listings', Schemavalidate, wrapAsync (async (req,res,next) => {      
 app.get('/listings/:id/edit', wrapAsync(async (req,res) => {    //UPDATE
     let {id} = req.params;
     const listing = await Listing.findById(id);
+    if(!listing) {
+        req.flash('error', 'Listing you requested for does not exist');
+        return res.redirect('/listings');
+    }
     res.render('listings/edit.ejs', {listing});
 }));
 
@@ -97,6 +123,7 @@ app.get('/listings/:id/edit', wrapAsync(async (req,res) => {    //UPDATE
 app.put('/listings/:id', Schemavalidate, wrapAsync(async(req,res) => {         //UPDATE
     let {id} = req.params; 
     await Listing.findByIdAndUpdate(id, {...req.body.listing});
+    req.flash('success', 'Listing Updated!');
     res.redirect(`/listings/${id}`);
 }));
 
@@ -105,6 +132,7 @@ app.delete('/listings/:id', wrapAsync(async (req,res) => {       //DELETE
     let {id} = req.params;
     let deletedListing = await Listing.findByIdAndDelete(id);
     console.log(deletedListing);
+    req.flash('success', 'Listing Deleted!');
     res.redirect('/listings');
 }));
 
@@ -117,7 +145,7 @@ app.post('/listings/:id/reviews', validateReview, wrapAsync( async (req,res) => 
     await newReview.save();
     listing.reviews.push(newReview._id);
     await listing.save();
-
+    req.flash('success', 'New Review Created!');
     res.redirect(`/listings/${listing._id}`);
 }));
 
@@ -128,7 +156,7 @@ app.delete('/listings/:id/reviews/:reviewId', wrapAsync(async (req,res) => {
 
     await Listing.findByIdAndUpdate(id, {$pull: {reviews : reviewId}});
     await Review.findByIdAndDelete(reviewId);
-
+    req.flash('success', 'Review Deleted!');
     res.redirect(`/listings/${id}`);
 })
 );
