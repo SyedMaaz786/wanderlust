@@ -7,7 +7,7 @@ const methodOverride = require('method-override');
 const ejsMate = require('ejs-mate');
 const wrapAsync = require('./utils/wrapAsync.js');
 const ExpressError = require('./utils/ExpressError.js');
-const { listingSchema, reviewSchema } = require('./schema.js');
+const { listingSchema, reviewSchema } = require('./schema.js'); //importing validation schema which we defined in schema.js
 const Review = require('./models/review.js');
 const session = require('express-session');
 const flash = require('connect-flash');
@@ -15,6 +15,8 @@ const passportLocalMongoose = require('passport-local-mongoose');
 const passport = require('passport');
 const LocalStrategy = require('passport-local');
 const User = require('./models/user.js');
+const {isLoggedIn} = require('./middleware.js');  //created the middleware.js and required here
+const { saveRedirectUrl } = require('./middleware.js'); //same as above
 
 
 
@@ -66,6 +68,7 @@ passport.deserializeUser(User.deserializeUser());
 app.use( (req,res,next) => {
     res.locals.success = req.flash('success'); //This is the middleware for flash.
     res.locals.error = req.flash('error');
+    res.locals.currUser = req.user;  //Anything stored in res.locals is available Only for the current request–response cycle.
     next();
 });
 
@@ -90,8 +93,13 @@ app.post('/signup', wrapAsync(async (req,res) => {       //post because we are s
     const newUser = new User ({email, username});  //creating a new user like how we created in the demouser
     const registeredUser = await User.register(newUser, password);  //using register inbuilt func who takes 2 parameters.
     console.log(registeredUser);
-    req.flash('success', 'Welcome to Wanderlust');  //using flasing to flash the msg.
-    res.redirect('/listings');                      //simple redirecting to listings.
+    req.login(registeredUser, (err) => {
+        if(err) {
+            return next(err);
+        }
+        req.flash('success', 'Welcome to Wanderlust');  //using flasing to flash the msg.
+        res.redirect('/listings');                          //simple redirecting to listings.
+    });
     } catch(e) {                     //here we are putting this in try catch to handle the error.
         req.flash('error', e.message); //if error occurs then we have used flash
         res.redirect('/signup');
@@ -103,14 +111,27 @@ app.post('/signup', wrapAsync(async (req,res) => {       //post because we are s
 app.get('/login', (req,res) => {  //Created a new route for login
     res.render('users/login.ejs'); 
 });
-app.post('/login',           //post because we are sending the user data to send or store the data we use post method
-    passport.authenticate('local', {failureRedirect: '/login', failureFlash:true}),  //This full line is the inbuilt func od node check gpt for more info.
+app.post('/login', saveRedirectUrl,           //post because we are sending the user data to send or store the data we use post method savedredirecturl is the midddleware we created in middleware.js we are implementing here.
+    passport.authenticate('local', {failureRedirect: '/login', failureFlash:true}),  //This full line is the inbuilt func of node check gpt for more info.
     async (req,res) => {
         req.flash('success','Welcome back to Wanderlust');  //if logged in then flash this msg
-        res.redirect('/listings');   //and simply redirect.
+        let redirectUrl = res.locals.redirectUrl || '/listings'; //Check gpt.
+        res.redirect(redirectUrl);   //and simply redirect.
 
 });
 
+//User logout
+
+app.get('/logout', (req,res,next) => {  //we have created a logout route here,
+    req.logout((err) => {   //This is a inbuilt func of node which by default takes a callback in the parameter.callback means immediately what we are suppose to do after logout. and here we are passing err.
+        if (err) {
+            return next(err);
+        }
+        req.flash('success', 'You are logged out');
+        res.redirect('/listings');
+    });
+
+});
 
 
 
@@ -142,7 +163,7 @@ app.get('/listings',wrapAsync(async (req,res) => {
 }));
 
 //New Route
-app.get('/listings/new', (req,res) => {        //CREATE
+app.get('/listings/new', isLoggedIn, (req,res) => {        //CREATE
     res.render('listings/new.ejs');
 });
 
@@ -158,8 +179,8 @@ app.get('/listings/:id',wrapAsync(async (req,res) => {   //READ
 }));
 
 //Create route
-app.post('/listings', Schemavalidate, wrapAsync (async (req,res,next) => {             //CREATE
-        const newListing = new Listing(req.body.listing);  // error handling concepts are present where we have created a function in wrapAsync.js file and using it here
+app.post('/listings', isLoggedIn, Schemavalidate, wrapAsync (async (req,res,next) => {             //CREATE    
+    const newListing = new Listing(req.body.listing);  // error handling concepts are present where we have created a function in wrapAsync.js file and using it here
         await newListing.save();
         req.flash('success', 'New Listing Created!');   //We will be displaying this msg when the user creates a new listing.
         res.redirect('/listings');
@@ -168,7 +189,7 @@ app.post('/listings', Schemavalidate, wrapAsync (async (req,res,next) => {      
 
 
 //Edit Route
-app.get('/listings/:id/edit', wrapAsync(async (req,res) => {    //UPDATE
+app.get('/listings/:id/edit', isLoggedIn, wrapAsync(async (req,res) => {    //UPDATE
     let {id} = req.params;
     const listing = await Listing.findById(id);
     if(!listing) {
@@ -179,7 +200,7 @@ app.get('/listings/:id/edit', wrapAsync(async (req,res) => {    //UPDATE
 }));
 
 //Update Route
-app.put('/listings/:id', Schemavalidate, wrapAsync(async(req,res) => {         //UPDATE
+app.put('/listings/:id', isLoggedIn, Schemavalidate, wrapAsync(async(req,res) => {         //UPDATE
     let {id} = req.params; 
     await Listing.findByIdAndUpdate(id, {...req.body.listing});
     req.flash('success', 'Listing Updated!');
@@ -187,7 +208,7 @@ app.put('/listings/:id', Schemavalidate, wrapAsync(async(req,res) => {         /
 }));
 
 //Delete Route
-app.delete('/listings/:id', wrapAsync(async (req,res) => {       //DELETE
+app.delete('/listings/:id', isLoggedIn, wrapAsync(async (req,res) => {       //DELETE
     let {id} = req.params;
     let deletedListing = await Listing.findByIdAndDelete(id);
     console.log(deletedListing);
