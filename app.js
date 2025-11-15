@@ -11,11 +11,17 @@ const { listingSchema, reviewSchema } = require('./schema.js');
 const Review = require('./models/review.js');
 const session = require('express-session');
 const flash = require('connect-flash');
+const passportLocalMongoose = require('passport-local-mongoose');
+const passport = require('passport');
+const LocalStrategy = require('passport-local');
+const User = require('./models/user.js');
+
+
 
 const MONGO_URL = 'mongodb://127.0.0.1:27017/wanderlust';
 main()
 .then( () => {
-    console.log('Connected to DB');
+    console.log('Connected to DB');   //Here we are just setting the mongoose server
 })
 .catch( (err) => {
     console.log(err)
@@ -49,11 +55,64 @@ app.get('/', (req,res) => {
 app.use(session(sessionOptions));  //This activates the session middleware.
 app.use(flash());  //This activates the flash middleware.
 
+
+app.use(passport.initialize());  //This is how you use the passport by 1st initializing.
+app.use(passport.session());     //Here we have created a middleware with session.
+passport.use(new LocalStrategy(User.authenticate()));  
+passport.serializeUser(User.serializeUser());   //Here this is the compulsory way of how we setup the passport check gpt for better understanding.
+passport.deserializeUser(User.deserializeUser());
+
+
 app.use( (req,res,next) => {
     res.locals.success = req.flash('success'); //This is the middleware for flash.
     res.locals.error = req.flash('error');
     next();
 });
+
+// app.get('/demouser', async (req, res) => {  //This is the demo route we are creating for our fake user 
+//     let fakeuser = new User({               
+//         email: 'Syed@gmail.com',
+//         username: 'Syed'
+//     });
+//     let registereduser = await User.register(fakeuser, 'helloworld');  //This register method will save our fakeuser data with the password in the database.
+//     res.send(registereduser);                                          //Here we are assigning to a variable called registerduser and in res.send (sending it)
+// });                                                                   //So basically register is the inbuilt method in node. 
+
+
+
+//User signup code
+app.get('/signup', (req,res) => {  //This is the signup route we created.
+    res.render('users/signup.ejs');
+});
+app.post('/signup', wrapAsync(async (req,res) => {       //post because we are sending the data
+    try {
+    let {username, email, password} = req.body;  //we are simply specifying what we are sending like email,username,password
+    const newUser = new User ({email, username});  //creating a new user like how we created in the demouser
+    const registeredUser = await User.register(newUser, password);  //using register inbuilt func who takes 2 parameters.
+    console.log(registeredUser);
+    req.flash('success', 'Welcome to Wanderlust');  //using flasing to flash the msg.
+    res.redirect('/listings');                      //simple redirecting to listings.
+    } catch(e) {                     //here we are putting this in try catch to handle the error.
+        req.flash('error', e.message); //if error occurs then we have used flash
+        res.redirect('/signup');
+    }
+})
+);
+
+//User login code
+app.get('/login', (req,res) => {  //Created a new route for login
+    res.render('users/login.ejs'); 
+});
+app.post('/login',           //post because we are sending the user data to send or store the data we use post method
+    passport.authenticate('local', {failureRedirect: '/login', failureFlash:true}),  //This full line is the inbuilt func od node check gpt for more info.
+    async (req,res) => {
+        req.flash('success','Welcome back to Wanderlust');  //if logged in then flash this msg
+        res.redirect('/listings');   //and simply redirect.
+
+});
+
+
+
 
 const Schemavalidate = (req, res, next) => {
     let { error } = listingSchema.validate(req.body);    //Here we are calling the listingSchema we created in the schema.js to handle the schemavalidations.
