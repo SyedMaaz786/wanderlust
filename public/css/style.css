@@ -23,9 +23,10 @@ body{
 .nav-link{
     color: #222222 !important;
 }
+/* footer */
 .f-info.links a {
+    color: #222222; 
     text-decoration: none;
-    color: #222222;
 }
 .f-info.links a:hover {
     text-decoration: underline;

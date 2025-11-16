@@ -15,7 +15,7 @@ const passportLocalMongoose = require('passport-local-mongoose');
 const passport = require('passport');
 const LocalStrategy = require('passport-local');
 const User = require('./models/user.js');
-const {isLoggedIn, isOwner} = require('./middleware.js');  //created the middleware.js and required here
+const {isLoggedIn, isOwner, isReviewAuthor} = require('./middleware.js');  //created the middleware.js and required here
 const { saveRedirectUrl } = require('./middleware.js'); //same as above
 
 
@@ -170,7 +170,14 @@ app.get('/listings/new', isLoggedIn, (req,res) => {        //CREATE
 //Show Route
 app.get('/listings/:id',wrapAsync(async (req,res) => {   //READ
     let {id} = req.params;
-    const listing = await Listing.findById(id).populate('reviews').populate('owner');  //populate('reviews') tells Mongoose, instead of returning only the ObjectId, Fetch the actual Review documents and insert them.
+    const listing = await Listing.findById(id)
+    .populate({
+        path:'reviews', 
+        populate:{ 
+            path:'author',
+        },
+    })
+    .populate('owner');  //populate('reviews') tells Mongoose, instead of returning only the ObjectId, Fetch the actual Review documents and insert them.
     if(!listing) {
         req.flash('error', 'Listing you requested for does not exist');
         return res.redirect('/listings');
@@ -220,12 +227,15 @@ app.delete('/listings/:id', isLoggedIn, isOwner, wrapAsync(async (req,res) => { 
 
 //Reviews(POST Review Route)
 
-app.post('/listings/:id/reviews', validateReview, wrapAsync( async (req,res) => {
+app.post('/listings/:id/reviews', isLoggedIn, validateReview, wrapAsync( async (req,res) => {
     let listing = await Listing.findById(req.params.id);
     let newReview = new Review (req.body.review);
+    newReview.author = req.user._id;
+    console.log(newReview);
+    listing.reviews.push(newReview._id);
+
 
     await newReview.save();
-    listing.reviews.push(newReview._id);
     await listing.save();
     req.flash('success', 'New Review Created!');
     res.redirect(`/listings/${listing._id}`);
@@ -233,7 +243,7 @@ app.post('/listings/:id/reviews', validateReview, wrapAsync( async (req,res) => 
 
 //Delete (Review Route)
 
-app.delete('/listings/:id/reviews/:reviewId', wrapAsync(async (req,res) => {
+app.delete('/listings/:id/reviews/:reviewId', isLoggedIn, isReviewAuthor, wrapAsync(async (req,res) => {
     let { id , reviewId } = req.params;
 
     await Listing.findByIdAndUpdate(id, {$pull: {reviews : reviewId}});
