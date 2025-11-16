@@ -14,24 +14,21 @@
             
             <div class="card-body">
                 
-                <p class="card-text"></p>
+                <p class="card-text">Owned by: <i><%= listing.owner.username %></i></p>
                 
-                <ul class="list-unstyled">
-                    <li><%= listing.description %></li>
-                    <li>
+                <p class="card-text"><%= listing.description %></p>
+                <p class="card-text">
                       &#8377;
-                      <%= (typeof listing.price === 'number' && !Number.isNaN(listing.price))
-                      ? listing.price.toLocaleString('en-IN')
-                      : 'N/A' %>
-                    </li>
-
-                    <li><%= listing.location %></li>
-                    <li><%= listing.country %></li>
-                </ul>
-                
+                      <%= listing.price.toLocaleString('en-IN') %>
+                      </p>
+                    <p class="card-text"><%= listing.location %></p>
+                    <p class="card-text"><%= listing.country %></p>
                 <br>
+            </div>
+        </div>
 
                 <!-- Edit / Delete Buttons -->
+                
                 <div class="btns d-flex mt-4">
                     <a href="/listings/<%= listing._id %>/edit" 
                         class="btn btn-sm edit-btn me-3">Edit</a>
@@ -40,6 +37,7 @@
                         <button class="btn btn-dark btn-sm delete-btn">Delete</button>
                     </form>
                 </div>
+               
 
                 
                 <hr class="mt-4">
