@@ -1,3 +1,9 @@
+if(process.env.NODE_ENV != 'production') {  
+    require('dotenv').config();
+}
+
+
+
 const express = require('express');
 const app = express();
 const mongoose = require('mongoose');
@@ -17,7 +23,12 @@ const LocalStrategy = require('passport-local');
 const User = require('./models/user.js');
 const {isLoggedIn, isOwner, isReviewAuthor} = require('./middleware.js');  //created the middleware.js and required here
 const { saveRedirectUrl } = require('./middleware.js'); //same as above
-
+const listingController = require('./controllers/listings.js');
+const reviewController = require('./controllers/reviews.js');
+const userController = require('./controllers/users.js');
+const multer = require('multer');
+const {storage} = require('./cloudConfig.js');
+const upload = multer({ storage })  //We are using multer to save our data which is sent in file format whose dest is uploads which multer automatically creates and save there. What we have deleted manually.
 
 
 const MONGO_URL = 'mongodb://127.0.0.1:27017/wanderlust';
@@ -84,54 +95,21 @@ app.use( (req,res,next) => {
 
 
 //User signup code
-app.get('/signup', (req,res) => {  //This is the signup route we created.
-    res.render('users/signup.ejs');
-});
-app.post('/signup', wrapAsync(async (req,res) => {       //post because we are sending the data
-    try {
-    let {username, email, password} = req.body;  //we are simply specifying what we are sending like email,username,password
-    const newUser = new User ({email, username});  //creating a new user like how we created in the demouser
-    const registeredUser = await User.register(newUser, password);  //using register inbuilt func who takes 2 parameters.
-    console.log(registeredUser);
-    req.login(registeredUser, (err) => {
-        if(err) {
-            return next(err);
-        }
-        req.flash('success', 'Welcome to Wanderlust');  //using flasing to flash the msg.
-        res.redirect('/listings');                          //simple redirecting to listings.
-    });
-    } catch(e) {                     //here we are putting this in try catch to handle the error.
-        req.flash('error', e.message); //if error occurs then we have used flash
-        res.redirect('/signup');
-    }
-})
-);
+app.get('/signup', userController.renderSignupForm);      //signup route
+app.post('/signup', wrapAsync (userController.userSignup));
+
+
 
 //User login code
-app.get('/login', (req,res) => {  //Created a new route for login
-    res.render('users/login.ejs'); 
-});
+app.get('/login', userController.renderLoginForm);
 app.post('/login', saveRedirectUrl,           //post because we are sending the user data to send or store the data we use post method savedredirecturl is the midddleware we created in middleware.js we are implementing here.
-    passport.authenticate('local', {failureRedirect: '/login', failureFlash:true}),  //This full line is the inbuilt func of node check gpt for more info.
-    async (req,res) => {
-        req.flash('success','Welcome back to Wanderlust');  //if logged in then flash this msg
-        let redirectUrl = res.locals.redirectUrl || '/listings'; //Check gpt.
-        res.redirect(redirectUrl);   //and simply redirect.
+    passport.authenticate('local', {failureRedirect: '/login', failureFlash:true}),
+userController.userLogin
+);                                                                                 //This full line is the inbuilt func of node check gpt for more info.
 
-});
 
 //User logout
-
-app.get('/logout', (req,res,next) => {  //we have created a logout route here,
-    req.logout((err) => {   //This is a inbuilt func of node which by default takes a callback in the parameter.callback means immediately what we are suppose to do after logout. and here we are passing err.
-        if (err) {
-            return next(err);
-        }
-        req.flash('success', 'You are logged out');
-        res.redirect('/listings');
-    });
-
-});
+app.get('/logout', userController.userLogout);
 
 
 
@@ -157,101 +135,33 @@ const validateReview = (req, res, next) => {
     };
 
 //Index Route
-app.get('/listings',wrapAsync(async (req,res) => {
-    const allListings = await Listing.find({});
-    res.render('listings/index.ejs', {allListings});
-}));
+app.get('/listings',wrapAsync (listingController.index));  //When ever the req is made for listings index will be called which is in the controller listing.js
 
 //New Route
-app.get('/listings/new', isLoggedIn, (req,res) => {        //CREATE
-    res.render('listings/new.ejs');
-});
+app.get('/listings/new', isLoggedIn, listingController.renderNewForm);   //CREATE
 
 //Show Route
-app.get('/listings/:id',wrapAsync(async (req,res) => {   //READ
-    let {id} = req.params;
-    const listing = await Listing.findById(id)
-    .populate({
-        path:'reviews', 
-        populate:{ 
-            path:'author',
-        },
-    })
-    .populate('owner');  //populate('reviews') tells Mongoose, instead of returning only the ObjectId, Fetch the actual Review documents and insert them.
-    if(!listing) {
-        req.flash('error', 'Listing you requested for does not exist');
-        return res.redirect('/listings');
-    }
-    console.log(listing);
-    res.render('listings/show.ejs', {listing});
-}));
+app.get('/listings/:id',wrapAsync (listingController.showListing));
 
 //Create route
-app.post('/listings', isLoggedIn, Schemavalidate, wrapAsync (async (req,res,next) => {             //CREATE    
-    const newListing = new Listing(req.body.listing);  // error handling concepts are present where we have created a function in wrapAsync.js file and using it here
-    newListing.owner = req.user._id;    
-    await newListing.save();
-        req.flash('success', 'New Listing Created!');   //We will be displaying this msg when the user creates a new listing.
-        res.redirect('/listings');
-})
-);
-
-
+app.post('/listings', isLoggedIn, Schemavalidate, upload.single('listing[image]'), wrapAsync (listingController.createlisting));
+  
 //Edit Route
-app.get('/listings/:id/edit', isLoggedIn, isOwner, wrapAsync(async (req,res) => {    //UPDATE
-    let {id} = req.params;
-    const listing = await Listing.findById(id);
-    if(!listing) {
-        req.flash('error', 'Listing you requested for does not exist');
-        return res.redirect('/listings');
-    }
-    res.render('listings/edit.ejs', {listing});
-}));
+app.get('/listings/:id/edit', isLoggedIn, isOwner, wrapAsync (listingController.renderEditForm));
 
 //Update Route
-app.put('/listings/:id', isLoggedIn, isOwner, Schemavalidate, wrapAsync(async(req,res) => {         //UPDATE
-    let {id} = req.params; 
-    await Listing.findByIdAndUpdate(id, {...req.body.listing});
-    req.flash('success', 'Listing Updated!');
-    res.redirect(`/listings/${id}`);
-}));
+app.put('/listings/:id', isLoggedIn, isOwner, Schemavalidate, wrapAsync (listingController.updateListing));
 
 //Delete Route
-app.delete('/listings/:id', isLoggedIn, isOwner, wrapAsync(async (req,res) => {       //DELETE
-    let {id} = req.params;
-    let deletedListing = await Listing.findByIdAndDelete(id);
-    console.log(deletedListing);
-    req.flash('success', 'Listing Deleted!');
-    res.redirect('/listings');
-}));
+app.delete('/listings/:id', isLoggedIn, isOwner, wrapAsync (listingController.deleteListing));
 
-//Reviews(POST Review Route)
+//Reviews(CREATE Review Route)
 
-app.post('/listings/:id/reviews', isLoggedIn, validateReview, wrapAsync( async (req,res) => {
-    let listing = await Listing.findById(req.params.id);
-    let newReview = new Review (req.body.review);
-    newReview.author = req.user._id;
-    console.log(newReview);
-    listing.reviews.push(newReview._id);
+app.post('/listings/:id/reviews', isLoggedIn, validateReview, wrapAsync (reviewController.createReview));
 
+//Reviews (DELETE Review Route)
 
-    await newReview.save();
-    await listing.save();
-    req.flash('success', 'New Review Created!');
-    res.redirect(`/listings/${listing._id}`);
-}));
-
-//Delete (Review Route)
-
-app.delete('/listings/:id/reviews/:reviewId', isLoggedIn, isReviewAuthor, wrapAsync(async (req,res) => {
-    let { id , reviewId } = req.params;
-
-    await Listing.findByIdAndUpdate(id, {$pull: {reviews : reviewId}});
-    await Review.findByIdAndDelete(reviewId);
-    req.flash('success', 'Review Deleted!');
-    res.redirect(`/listings/${id}`);
-})
-);
+app.delete('/listings/:id/reviews/:reviewId', isLoggedIn, isReviewAuthor, wrapAsync (reviewController.deleteReview));
 
 // app.get('/testListing', async (req,res) => {
 //     let sampleListing = new Listing({
