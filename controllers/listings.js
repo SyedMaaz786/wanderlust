@@ -59,7 +59,15 @@ module.exports.renderEditForm = (async (req,res) => {    //UPDATE
 
 module.exports.updateListing = (async(req,res) => {         //UPDATE
     let {id} = req.params; 
-    await Listing.findByIdAndUpdate(id, {...req.body.listing});
+    let listing = await Listing.findByIdAndUpdate(id, {...req.body.listing});
+    
+    if (typeof req.file !== 'undefined'){      //This condition is to check if the user din't upload the image while editing the listing.
+    let url = req.file.path;                  //We are extracting the url and filename in the respective url and filename variable.
+    let filename = req.file.filename;
+    listing.image = { url, filename };         //Here we will save our image with the url and filename.
+    await listing.save();
+    }
+    
     req.flash('success', 'Listing Updated!');
     res.redirect(`/listings/${id}`);
 });

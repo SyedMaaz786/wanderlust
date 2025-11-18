@@ -61,9 +61,9 @@ const sessionOptions = {         //Here we are using session. Which is basically
     },
 };
 
-app.get('/', (req,res) => {
-    res.send('Hi, i am root');
-});
+// app.get('/', (req,res) => {
+//     res.send('Hi, i am root');
+// });
 
 app.use(session(sessionOptions));  //This activates the session middleware.
 app.use(flash());  //This activates the flash middleware.
@@ -141,7 +141,7 @@ app.get('/listings',wrapAsync (listingController.index));  //When ever the req i
 app.get('/listings/new', isLoggedIn, listingController.renderNewForm);   //CREATE
 
 //Show Route
-app.get('/listings/:id',wrapAsync (listingController.showListing));
+app.get('/listings/:id', isLoggedIn, wrapAsync (listingController.showListing));
 
 //Create route
 app.post('/listings', isLoggedIn, Schemavalidate, upload.single('listing[image]'), wrapAsync (listingController.createlisting));
@@ -150,7 +150,7 @@ app.post('/listings', isLoggedIn, Schemavalidate, upload.single('listing[image]'
 app.get('/listings/:id/edit', isLoggedIn, isOwner, wrapAsync (listingController.renderEditForm));
 
 //Update Route
-app.put('/listings/:id', isLoggedIn, isOwner, Schemavalidate, wrapAsync (listingController.updateListing));
+app.put('/listings/:id', isLoggedIn, isOwner, upload.single('listing[image]'), Schemavalidate, wrapAsync (listingController.updateListing));
 
 //Delete Route
 app.delete('/listings/:id', isLoggedIn, isOwner, wrapAsync (listingController.deleteListing));
