@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 const Review = require('./review.js');
+const { required } = require('joi');
 
 const listingSchema = new Schema({
   title: {
@@ -25,6 +26,12 @@ const listingSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'User',
   },
+  category: {
+    type: String,
+    enum: ['trending', 'rooms', 'iconic cities', 'mountains', 'castles',
+       'amazing pools', 'camping', 'farms', 'arctic', 'domes', 'boats'],
+       required: true
+  }
 });
 
 listingSchema.post('findOneAndDelete', async (listing) => {  //mongoose middleware to delete the reviews when the listing is deleted.

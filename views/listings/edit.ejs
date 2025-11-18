@@ -29,6 +29,7 @@ enctype="multipart/form-data">
         ><%= listing.description %></textarea>
         <div class="invalid-feedback">Please enter a short description</div>
     </div>
+
     <div class="mb-3">
         Original Listing Image
           <br>
@@ -39,8 +40,6 @@ enctype="multipart/form-data">
           />
     </div>
 
-   
-
     <div class="mb-3">
         <label for="image" class="form-label">Upload New Image </label>
         <input 
@@ -50,6 +49,7 @@ enctype="multipart/form-data">
         />
         <div class="invalid-feedback">Please enter a valid link for Image</div>
     </div>
+
     <div class="row">
     <div class="mb-3 col-md-4">
         <label for="price" class="form-label">Price</label>
@@ -87,8 +87,28 @@ enctype="multipart/form-data">
         />
         <div class="invalid-feedback">Location should be valid</div>
     </div>
-    
+
+    <!-- CATEGORY DROPDOWN (added here) -->
+    <div class="mb-3">
+        <label for="category" class="form-label">Category</label>
+        <select name="listing[category]" class="form-select" required>
+            <option value="trending" <%= listing.category === 'trending' ? 'selected' : '' %>>Trending</option>
+            <option value="rooms" <%= listing.category === 'rooms' ? 'selected' : '' %>>Rooms</option>
+            <option value="iconic cities" <%= listing.category === 'iconic cities' ? 'selected' : '' %>>Iconic Cities</option>
+            <option value="mountains" <%= listing.category === 'mountains' ? 'selected' : '' %>>Mountains</option>
+            <option value="castles" <%= listing.category === 'castles' ? 'selected' : '' %>>Castles</option>
+            <option value="amazing pools" <%= listing.category === 'amazing pools' ? 'selected' : '' %>>Amazing Pools</option>
+            <option value="camping" <%= listing.category === 'camping' ? 'selected' : '' %>>Camping</option>
+            <option value="farms" <%= listing.category === 'farms' ? 'selected' : '' %>>Farms</option>
+            <option value="arctic" <%= listing.category === 'arctic' ? 'selected' : '' %>>Arctic</option>
+            <option value="domes" <%= listing.category === 'domes' ? 'selected' : '' %>>Domes</option>
+            <option value="boats" <%= listing.category === 'boats' ? 'selected' : '' %>>Boats</option>
+        </select>
+        <div class="invalid-feedback">Please select a category</div>
+    </div>
+
     <button class="btn btn-dark edit-btn mt-3">Edit</button>
 </form>
+
 </div>
 </div>

@@ -8,7 +8,10 @@ module.exports.listingSchema = Joi.object ({  //instead of declaring the listing
         country: Joi.string().required(),
         price: Joi.number().required().min(0),  //Here price amount should start from 0.
         image: Joi.string().allow('',null),  //Here we wanna allow the user if he dont have any image i.e,''empty string or null value.
-    }).required(),
+        category: Joi.string().valid(
+            'trending','rooms','iconic cities','mountains','castles','amazing pools',
+            'camping', 'farms', 'arctic','domes','boats').required(),
+        }).required(),
 });
 
 module.exports.reviewSchema = Joi.object({  //Defining the reviews schema

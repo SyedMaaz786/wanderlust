@@ -177,6 +177,15 @@ app.delete('/listings/:id/reviews/:reviewId', isLoggedIn, isReviewAuthor, wrapAs
 //     res.send('successful testing');
 // });
 
+
+app.get('/listings/category/:category', wrapAsync(async (req,res) => {
+    const { category } = req.params;
+    const listings = await Listing.find({ category });
+
+    res.render('listings/category', { listings, category });
+}));
+
+
 app.all(/.*/, (req,res,next) => {                 //Here * is the js regex literal to match everything.
     next(new ExpressError(404, 'Page Not Found')); //we have created a class to handle the rrors in the ExpressError file and using it here to handle the errors.
 });

@@ -1,0 +1,19 @@
+<% layout('/layouts/boilerplate') %>
+
+<h2 class="mt-4"><%= category.toUpperCase() %></h2>
+
+<div class="row mt-3">
+  <% listings.forEach(listing => { %>
+    <div class="col-3 mb-4">
+      <div class="card">
+        <a href="/listings/<%= listing._id %>">
+          <img src="<%= listing.image.url %>" class="card-img-top">
+        </a>
+        <div class="card-body">
+          <h5><%= listing.title %></h5>
+          <p>₹ <%= listing.price %> / night</p>
+        </div>
+      </div>
+    </div>
+  <% }) %>
+</div>
