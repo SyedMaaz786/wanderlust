@@ -1,0 +1,17 @@
+<% layout('layouts/boilerplate') %>
+
+<h2>Listings in <%= country %></h2>
+
+<% if (!listings || listings.length === 0) { %>
+  <p>No listings found for <%= country %>.</p>
+<% } else { %>
+  <div class="listings-grid" style="display:flex; flex-wrap:wrap; gap:1rem;">
+    <% listings.forEach(l => { %>
+      <div class="card" style="padding:1rem; border-radius:10px; width:250px; border:1px solid #ddd;">
+        <h3><a href="/listings/<%= l._id %>"><%= l.title %></a></h3>
+        <p><%= l.location %> — <%= l.country %></p>
+        <p>Price: <%= l.price %></p>
+      </div>
+    <% }) %>
+  </div>
+<% } %>

@@ -30,10 +30,16 @@
         <a class="nav-link" href="/listings">Explore</a>
       </div>
       <div class="navbar-nav ms-auto">
-        <form class="d-flex" role="search">
-      <input class="form-control me-2 search-inp" type="search" placeholder="Search destinations"/>
-      <button class="btn search-btn" type="submit"><i class="fa-solid fa-magnifying-glass"></i>Search</button>
-    </form>
+        <form class="d-flex" id="countrySearchForm">
+  <select class="form-control me-2 search-inp" id="countrySelect">
+    <option value="">All countries</option>
+  </select>
+
+  <button class="btn search-btn" type="button" id="searchBtn">
+    <i class="fa-solid fa-magnifying-glass"></i>Search
+  </button>
+</form>
+
       </div>
 
 
@@ -49,3 +55,32 @@
     </div>
   </div>
 </nav>
+
+<script>
+  // This code runs when the user clicks the dropdown
+  async function loadCountries() {    //function to fetch the country list
+    const res = await fetch('/countries'); //here store it in the variable and '/countries' will call your backend route we created 
+    const countries = await res.json();    //Converts it into a js array
+
+    const select = document.getElementById('countrySelect');  //This is my select tag i created above for 'all countries' and doc refers to the whole webpage
+    countries.forEach(country => {
+      const option = document.createElement('option');
+      option.value = country;
+      option.textContent = country;
+      select.appendChild(option);   //value is the child where option will be inserted to the select
+    });
+  }
+
+  loadCountries();
+
+  // This code runs when the user clicks the search button
+  document.getElementById('searchBtn').onclick = function () {  //finds the id by name 'searchbtn' and runs the func whenever the user clicks it
+    const country = document.getElementById('countrySelect').value;  //This gets the value from your dropdown
+
+    if (country === "") {
+      window.location = '/listings';  //windows.location this tells the browser go to this url similarly like the req.redirect in node
+    } else {
+      window.location.href = `/listings/country/${encodeURIComponent(country)}`;  //encodedURIComponent, This makes the URL safe, especially if the country contains spaces. Ex: United States → becomes → United%20States
+    }
+  };
+</script>

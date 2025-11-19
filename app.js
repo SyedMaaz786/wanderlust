@@ -186,6 +186,26 @@ app.get('/listings/category/:category', wrapAsync(async (req,res) => {
 }));
 
 
+
+
+
+app.get('/countries', wrapAsync(async (req,res) => {     
+    const countries = await Listing.distinct('country');   // This line asks MongoDB give me ALL different values in the country field
+    res.json(countries.sort());//sorts the countries alphabetically and sends the data back to frontend on json format.
+}));
+
+app.get('/listings/country/:country', wrapAsync(async (req,res) => {  //When the user selects a country and clicks search they are redirected to that particular listings page.
+    const country = req.params.country;
+    const listings = await Listing.find({country});
+    res.render('listings/country', { listings, country });
+}));
+
+
+
+
+
+
+
 app.all(/.*/, (req,res,next) => {                 //Here * is the js regex literal to match everything.
     next(new ExpressError(404, 'Page Not Found')); //we have created a class to handle the rrors in the ExpressError file and using it here to handle the errors.
 });
