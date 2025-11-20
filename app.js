@@ -16,6 +16,7 @@ const ExpressError = require('./utils/ExpressError.js');
 const { listingSchema, reviewSchema } = require('./schema.js'); //importing validation schema which we defined in schema.js
 const Review = require('./models/review.js');
 const session = require('express-session');
+const MongoStore = require('connect-mongo');
 const flash = require('connect-flash');
 const passportLocalMongoose = require('passport-local-mongoose');
 const passport = require('passport');
@@ -28,10 +29,12 @@ const reviewController = require('./controllers/reviews.js');
 const userController = require('./controllers/users.js');
 const multer = require('multer');
 const {storage} = require('./cloudConfig.js');
+const { error } = require('console');
 const upload = multer({ storage })  //We are using multer to save our data which is sent in file format whose dest is uploads which multer automatically creates and save there. What we have deleted manually.
 
 
-const MONGO_URL = 'mongodb://127.0.0.1:27017/wanderlust';
+// const MONGO_URL = 'mongodb://127.0.0.1:27017/wanderlust';
+const dbUrl = process.env.ATLASDB_URL;
 main()
 .then( () => {
     console.log('Connected to DB');   //Here we are just setting the mongoose server
@@ -40,7 +43,7 @@ main()
     console.log(err)
 });
 async function main() {
-    await mongoose.connect(MONGO_URL)
+    await mongoose.connect(dbUrl);
 }
 
 app.set('view engine', 'ejs');
@@ -50,7 +53,21 @@ app.use(methodOverride('_method'));
 app.engine('ejs', ejsMate);
 app.use(express.static(path.join(__dirname, '/public')));   // (app.use) This is how you use middleware in Express. (express.static) This is the middleware built-in function.(path.join) This part is crucial for creating a path.(__dirname) This is a global variable in Node.js that gives you the absolute path of the directory.(public) This is the name of the folder you want to serve.
 
+
+const store = MongoStore.create ({
+    mongoUrl: dbUrl,
+    crypto: {
+        secret: 'mysupersecretcode',
+    },
+    touchAfter: 24 * 3600,
+});
+
+store.on('error', () => {
+    console.log('ERROR in MONGO SESSION STORE', err);
+});
+
 const sessionOptions = {         //Here we are using session. Which is basically used to store the user info on the server for sometime. 
+    store,
     secret: 'mysupersecretcode',  //This is the basic way to write the session.
     resave: false,                //Don’t save the session to the store if nothing has changed in the session.
     saveUninitialized: true,       //Save a session even if it is new and not modified.
