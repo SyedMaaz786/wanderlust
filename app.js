@@ -56,23 +56,20 @@ app.use(express.static(path.join(__dirname, '/public')));   // (app.use) This is
 
 const store = MongoStore.create ({
     mongoUrl: dbUrl,
-    crypto: {
-        secret: 'mysupersecretcode',
-    },
     touchAfter: 24 * 3600,
 });
 
-store.on('error', () => {
+store.on('error', (err) => {
     console.log('ERROR in MONGO SESSION STORE', err);
 });
 
 const sessionOptions = {         //Here we are using session. Which is basically used to store the user info on the server for sometime. 
     store,
-    secret: 'mysupersecretcode',  //This is the basic way to write the session.
+    secret: process.env.SECRET,  //This is the basic way to write the session.
     resave: false,                //Don’t save the session to the store if nothing has changed in the session.
     saveUninitialized: true,       //Save a session even if it is new and not modified.
     cookie: {
-        expires: Date.now() + 7 * 24 * 60 * 60 * 1000,  //This is the logic we are writing that the cookie shold expire after 1 week.
+        expires: new Date (Date.now() + 7 * 24 * 60 * 60 * 1000),  //This is the logic we are writing that the cookie shold expire after 1 week.
         maxAge: 7 * 24 * 60 * 60 * 1000,
         httpOnly: true,   //This is to protect cookie from malicious xss attacks.
     },
@@ -218,8 +215,9 @@ app.get('/listings/country/:country', wrapAsync(async (req,res) => {  //When the
 }));
 
 
-
-
+app.get('/', (req,res) => {
+    return res.redirect('/listings');
+});
 
 
 
@@ -230,6 +228,11 @@ app.all(/.*/, (req,res,next) => {                 //Here * is the js regex liter
 
 app.use( (err, req, res, next) => {      //Created middleware to handle the error
     let{ status= 500, message='Something went wrong' } = err;        //Destructured
+    
+    if (res.headersSent) {
+        return next(err);
+    }
+
     res.status(status).render('error.ejs', {message});
     // res.status(status).send(message);            //in destructuring the values for status and message are given if nothing is being displayed when error occurs this will be displayed.
 });    
