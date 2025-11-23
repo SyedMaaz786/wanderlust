@@ -4,7 +4,7 @@ module.exports.renderSignupForm = (req,res) => {  //This is the signup route we 
     res.render('users/signup.ejs');
 };
 
-module.exports.userSignup = (async (req,res) => {       //post because we are sending the data
+module.exports.userSignup = (async (req,res,next) => {       //post because we are sending the data
     try {
     let {username, email, password} = req.body;  //we are simply specifying what we are sending like email,username,password
     const newUser = new User ({email, username});  //creating a new user like how we created in the demouser
@@ -12,14 +12,16 @@ module.exports.userSignup = (async (req,res) => {       //post because we are se
     console.log(registeredUser);
     req.login(registeredUser, (err) => {
         if(err) {
-            return next(err);
+         
+           req.flash('error', 'Something went wrong while logging you in');  //using flasing to flash the msg.
+           return res.redirect('/login');
         }
-        req.flash('success', 'Welcome to Wanderlust');  //using flasing to flash the msg.
-        res.redirect('/listings');                          //simple redirecting to listings.
+        req.flash('success', 'Welcome to Wanderlust');
+        return res.redirect('/listings');                          //simple redirecting to listings.
     });
     } catch(e) {                     //here we are putting this in try catch to handle the error.
         req.flash('error', e.message); //if error occurs then we have used flash
-        res.redirect('/signup');
+        return res.redirect('/signup');
     }
 });
 
